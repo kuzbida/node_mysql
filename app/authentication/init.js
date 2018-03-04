@@ -12,7 +12,7 @@ const passwordHash = bcrypt.hashSync(myPlaintextPassword, salt)
 
 const user = {
   username: 'test-user',
-  passwordHash,
+	passwordHash: passwordHash,
   id: 1
 }
 
