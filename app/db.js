@@ -1,10 +1,11 @@
 const mysql = require('mysql');
-let db;
+let db, configDB;
 
 module.exports = {
 	init: (config) => {
+		configDB = config.db;
 
-		db = mysql.createConnection(config.db);
+		db = mysql.createConnection(configDB);
 
 // Connection to DB
 		db.connect(function (err) {
@@ -14,7 +15,7 @@ module.exports = {
 			}
 			console.log('DB Connected!');
 
-			db.query(`SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = '${config.db.name}'`, (err, result) => {
+			db.query(`SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = '${configDB.name}'`, (err, result) => {
 				if (err) {
 					throw err;
 				}
@@ -30,7 +31,7 @@ module.exports = {
 		});
 
 		function createDB(cb) {
-			return db.query(`CREATE DATABASE ${config.db.name};`, function (err, result) {
+			return db.query(`CREATE DATABASE ${configDB.name};`, function (err, result) {
 				if (err) {
 					throw err;
 				}
@@ -42,8 +43,8 @@ module.exports = {
 		}
 
 		function createTables() {
-			const usersTable = `CREATE TABLE IF NOT EXISTS ${config.db.name}.users (id VARCHAR(45) NOT NULL, email VARCHAR(45) NOT NULL, name VARCHAR(45) NULL, created DATETIME DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (id), UNIQUE INDEX email_UNIQUE (email ASC))`,
-			images = `CREATE TABLE IF NOT EXISTS ${config.db.name}.images (id INT NOT NULL, name VARCHAR(45) NULL, created VARCHAR(45) NULL, path VARCHAR(45) NULL, user_id VARCHAR(45) NOT NULL, PRIMARY KEY (id), FOREIGN KEY (user_id) REFERENCES ${config.db.name}.users (id) ON DELETE CASCADE ON UPDATE NO ACTION);`;
+			const usersTable = `CREATE TABLE IF NOT EXISTS ${configDB.name}.users (id int NOT NULL AUTO_INCREMENT, facebook_id VARCHAR(45) NOT NULL, name VARCHAR(45) NULL, created DATETIME DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (id), UNIQUE INDEX facebook_id_UNIQUE (facebook_id ASC))`,
+			images = `CREATE TABLE IF NOT EXISTS ${configDB.name}.images (id INT NOT NULL, name VARCHAR(45) NULL, created VARCHAR(45) NULL, path VARCHAR(45) NULL, user_id INT NOT NULL, PRIMARY KEY (id), FOREIGN KEY (user_id) REFERENCES ${configDB.name}.users (id) ON DELETE CASCADE ON UPDATE NO ACTION);`;
 
 			db.query(usersTable, function (err, result) {
 				if (err) {
@@ -59,5 +60,13 @@ module.exports = {
 				console.log('Table images created');
 			});
 		}
+	},
+
+	findUser: function (facebookId, cb) {
+		return db.query(`SELECT * FROM ${configDB.name}.users where facebook_id = '${facebookId}';`, cb);
+	},
+
+	createUser: function (profile, cb) {
+		return db.query(`INSERT INTO ${configDB.name}.users (facebook_id,name) VALUES ('${profile.id}','${profile.displayName}');`, cb);
 	}
 };

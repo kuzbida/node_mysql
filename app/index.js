@@ -4,6 +4,7 @@ const express = require('express');
 const exphbs = require('express-handlebars');
 const bodyParser = require('body-parser');
 const passport = require('passport');
+const FacebookStrategy = require('passport-facebook').Strategy;
 const session = require('express-session');
 const RedisStore = require('connect-redis')(session);
 const db = require('./db');
@@ -36,6 +37,40 @@ app.use(session({
   resave: false,
   saveUninitialized: false
 }));
+
+passport.use(new FacebookStrategy(config.facebook, function(accessToken, refreshToken, profile, done) {
+
+	db.findUser(profile.id, (err, result) => {
+		if (err) next(err);
+
+		if(result.length === 0) {
+			db.createUser(profile, (err, result) => {
+				if (err) throw err;
+
+				done(result);
+			})
+		} else {
+
+			done();
+		}
+		console.log(result);
+	});
+
+}));
+
+
+// Redirect the user to Facebook for authentication.  When complete,
+// Facebook will redirect the user back to the application at
+//     /auth/facebook/callback
+app.get('/auth/facebook', passport.authenticate('facebook'));
+
+// Facebook will redirect the user to this URL after approval.  Finish the
+// authentication process by attempting to obtain an access token.  If
+// access was granted, the user will be logged in.  Otherwise,
+// authentication has failed.
+app.get('/auth/facebook/callback',
+		passport.authenticate('facebook', { successRedirect: '/',
+			failureRedirect: '/login' }));
 
 app.use(passport.initialize());
 app.use(passport.session());
