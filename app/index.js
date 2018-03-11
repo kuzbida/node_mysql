@@ -27,7 +27,7 @@ app.use(bodyParser.urlencoded({
 }));
 
 // TODO this should be used for admin console
-//require('./authentication').init(app);
+require('./authentication').init(app);
 
 app.use(session({
 	store: new RedisStore({
@@ -42,7 +42,7 @@ passport.use(new FacebookStrategy(config.facebook, function (accessToken, refres
 
 	db.findUser(profile.id, (err, result) => {
 		if (err) {
-			next(err);
+			done(err, null);
 		}
 
 		if (result.length === 0) {
@@ -51,11 +51,10 @@ passport.use(new FacebookStrategy(config.facebook, function (accessToken, refres
 					throw err;
 				}
 
-				done(result);
+				done(null, result);
 			});
 		} else {
-
-			done();
+			done({status: 400, msg: 'You have already signed in'});
 		}
 		console.log(result);
 	});
@@ -71,11 +70,16 @@ app.get('/auth/facebook', passport.authenticate('facebook'));
 // authentication process by attempting to obtain an access token.  If
 // access was granted, the user will be logged in.  Otherwise,
 // authentication has failed.
-app.get('/auth/facebook/callback',
-		passport.authenticate('facebook', {
-			successRedirect: '/',
-			failureRedirect: '/login'
-		}));
+app.get('/auth/facebook/callback', (req, res, next) => {
+	passport.authenticate('facebook', {
+		successRedirect: '/success',
+		failureRedirect: '/reject'
+	}, (ev) => {
+		console.log(ev);
+		console.log(req);
+		res.redirect('/reject');
+	})(req, res, next)
+});
 
 app.use(passport.initialize());
 app.use(passport.session());
@@ -92,5 +96,6 @@ app.set('views', path.join(__dirname));
 
 require('./user').init(app);
 require('./note').init(app);
+require('./test').init(app);
 
 module.exports = app;

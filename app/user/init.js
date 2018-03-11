@@ -1,22 +1,22 @@
-const passport = require('passport')
+const passport = require('passport');
 
-function initUser (app) {
-  app.get('/', renderWelcome)
-  app.get('/profile', passport.authenticationMiddleware(), renderProfile)
-  app.post('/login', passport.authenticate('local', {
-    successRedirect: '/profile',
-    failureRedirect: '/'
-  }))
+function initUser(app) {
+	app.get('/', renderWelcome);
+	app.get('/profile', passport.authenticationMiddleware(), renderProfile);
+	app.post('/login', passport.authenticate('local', {
+		successRedirect: '/profile',
+		failureRedirect: '/'
+	}));
 }
 
-function renderWelcome (req, res) {
-  res.render('user/welcome')
+function renderWelcome(req, res) {
+	res.render('user/welcome');
 }
 
-function renderProfile (req, res) {
-  res.render('user/profile', {
-    username: req.user.username
-  })
+function renderProfile(req, res) {
+	res.render('user/profile', {
+		username: req.user.username
+	});
 }
 
-module.exports = initUser
+module.exports = initUser;
