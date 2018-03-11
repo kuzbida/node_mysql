@@ -22,33 +22,37 @@ switch (process.env.env) {
 
 db.init(config);
 
-
 app.use(bodyParser.urlencoded({
-  extended: false
+	extended: false
 }));
 
-require('./authentication').init(app);
+// TODO this should be used for admin console
+//require('./authentication').init(app);
 
 app.use(session({
-  store: new RedisStore({
-    url: config.redisStore.url
-  }),
-  secret: config.redisStore.secret,
-  resave: false,
-  saveUninitialized: false
+	store: new RedisStore({
+		url: config.redisStore.url
+	}),
+	secret: config.redisStore.secret,
+	resave: false,
+	saveUninitialized: false
 }));
 
-passport.use(new FacebookStrategy(config.facebook, function(accessToken, refreshToken, profile, done) {
+passport.use(new FacebookStrategy(config.facebook, function (accessToken, refreshToken, profile, done) {
 
 	db.findUser(profile.id, (err, result) => {
-		if (err) next(err);
+		if (err) {
+			next(err);
+		}
 
-		if(result.length === 0) {
+		if (result.length === 0) {
 			db.createUser(profile, (err, result) => {
-				if (err) throw err;
+				if (err) {
+					throw err;
+				}
 
 				done(result);
-			})
+			});
 		} else {
 
 			done();
@@ -57,7 +61,6 @@ passport.use(new FacebookStrategy(config.facebook, function(accessToken, refresh
 	});
 
 }));
-
 
 // Redirect the user to Facebook for authentication.  When complete,
 // Facebook will redirect the user back to the application at
@@ -69,17 +72,19 @@ app.get('/auth/facebook', passport.authenticate('facebook'));
 // access was granted, the user will be logged in.  Otherwise,
 // authentication has failed.
 app.get('/auth/facebook/callback',
-		passport.authenticate('facebook', { successRedirect: '/',
-			failureRedirect: '/login' }));
+		passport.authenticate('facebook', {
+			successRedirect: '/',
+			failureRedirect: '/login'
+		}));
 
 app.use(passport.initialize());
 app.use(passport.session());
 
 app.engine('.hbs', exphbs({
-  defaultLayout: 'layout',
-  extname: '.hbs',
-  layoutsDir: path.join(__dirname),
-  partialsDir: path.join(__dirname)
+	defaultLayout: 'layout',
+	extname: '.hbs',
+	layoutsDir: path.join(__dirname),
+	partialsDir: path.join(__dirname)
 }));
 
 app.set('view engine', '.hbs');
