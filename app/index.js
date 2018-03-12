@@ -27,7 +27,7 @@ app.use(bodyParser.urlencoded({
 }));
 
 // TODO this should be used for admin console
-require('./authentication').init(app);
+//require('./authentication').init(app);
 
 app.use(session({
 	store: new RedisStore({
@@ -39,10 +39,12 @@ app.use(session({
 }));
 
 passport.use(new FacebookStrategy(config.facebook, function (accessToken, refreshToken, profile, done) {
-
 	db.findUser(profile.id, (err, result) => {
 		if (err) {
-			done(err, null);
+			done({
+				status: 400,
+				error: err
+			}, null);
 		}
 
 		if (result.length === 0) {
@@ -51,14 +53,16 @@ passport.use(new FacebookStrategy(config.facebook, function (accessToken, refres
 					throw err;
 				}
 
-				done(null, result);
+				done({status: 201}, result);
 			});
 		} else {
-			done({status: 400, msg: 'You have already signed in'});
+			done({
+				status: 400,
+				msg: 'You have already signed in'
+			});
 		}
 		console.log(result);
 	});
-
 }));
 
 // Redirect the user to Facebook for authentication.  When complete,
@@ -75,11 +79,45 @@ app.get('/auth/facebook/callback', (req, res, next) => {
 		successRedirect: '/success',
 		failureRedirect: '/reject'
 	}, (ev) => {
-		console.log(ev);
-		console.log(req);
-		res.redirect('/reject');
-	})(req, res, next)
+		console.log('/auth/facebook/callback', ev);
+		switch (ev.status) {
+			case 201:
+				res.redirect('/success');
+				break;
+			case 400:
+				res.redirect('/sorry');
+				break;
+			default:
+				res.redirect('/');
+				break;
+
+		}
+
+	})(req, res, next);
 });
+
+app.get('/', (req, res) => {
+	res.render('pages/welcome');
+});
+app.get('/success', ensureAuthenticated, (req, res, next) => {
+	res.render('pages/success');
+});
+app.get('/reject', (req, res) => {
+	return res.render('pages/reject');
+});
+app.get('/sorry', (req, res) => {
+	return res.render('pages/reject');
+});
+
+function ensureAuthenticated(req, res, next) {
+	if (req.isAuthenticated()) {
+		return next();
+	}
+	res.redirect('/auth/facebook');
+}
+
+//app.get('/server', ensureAuthenticated, routes.server.get);
+//app.get('/login', routes.login.get);
 
 app.use(passport.initialize());
 app.use(passport.session());
@@ -94,8 +132,7 @@ app.engine('.hbs', exphbs({
 app.set('view engine', '.hbs');
 app.set('views', path.join(__dirname));
 
-require('./user').init(app);
-require('./note').init(app);
-require('./test').init(app);
+//require('./user').init(app);
+//require('./note').init(app);
 
 module.exports = app;
