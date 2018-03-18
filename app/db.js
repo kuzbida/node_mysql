@@ -44,7 +44,7 @@ module.exports = {
 
 		function createTables() {
 			const usersTable = `CREATE TABLE IF NOT EXISTS ${configDB.name}.users (id int NOT NULL AUTO_INCREMENT, facebook_id VARCHAR(45) NOT NULL, name VARCHAR(45) NULL, created DATETIME DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (id), UNIQUE INDEX facebook_id_UNIQUE (facebook_id ASC))`,
-			images = `CREATE TABLE IF NOT EXISTS ${configDB.name}.images (id INT NOT NULL, name VARCHAR(45) NULL, created VARCHAR(45) NULL, path VARCHAR(45) NULL, user_id INT NOT NULL, PRIMARY KEY (id), FOREIGN KEY (user_id) REFERENCES ${configDB.name}.users (id) ON DELETE CASCADE ON UPDATE NO ACTION);`;
+			images = `CREATE TABLE IF NOT EXISTS ${configDB.name}.images (id int NOT NULL AUTO_INCREMENT, name VARCHAR(45) NULL, created VARCHAR(45) NULL, path VARCHAR(45) NULL, user_id INT NOT NULL, PRIMARY KEY (id), FOREIGN KEY (user_id) REFERENCES ${configDB.name}.users (id) ON DELETE CASCADE ON UPDATE NO ACTION);`;
 
 			db.query(usersTable, function (err, result) {
 				if (err) {
@@ -62,11 +62,19 @@ module.exports = {
 		}
 	},
 
-	findUser: function (facebookId, cb) {
+	findUser: function (id, cb) {
+		return db.query(`SELECT * FROM ${configDB.name}.users where id = '${id}';`, cb);
+	},
+
+	findUserByFacebookId: function (facebookId, cb) {
 		return db.query(`SELECT * FROM ${configDB.name}.users where facebook_id = '${facebookId}';`, cb);
 	},
 
 	createUser: function (profile, cb) {
 		return db.query(`INSERT INTO ${configDB.name}.users (facebook_id,name) VALUES ('${profile.id}','${profile.displayName}');`, cb);
+	},
+
+	saveImage: function (name, cb) {
+		return db.query(`INSERT INTO ${configDB.name}.images (name, path) VALUES ('${name}','images/${name}');`, cb);
 	}
 };

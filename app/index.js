@@ -1,10 +1,11 @@
 const path = require('path');
+const fs = require('fs');
 
 const express = require('express');
 const exphbs = require('express-handlebars');
 const bodyParser = require('body-parser');
+const cookieParser = require('cookie-parser');
 const passport = require('passport');
-const FacebookStrategy = require('passport-facebook').Strategy;
 const session = require('express-session');
 const RedisStore = require('connect-redis')(session);
 const db = require('./db');
@@ -25,45 +26,30 @@ db.init(config);
 app.use(bodyParser.urlencoded({
 	extended: false
 }));
+app.use(cookieParser());
 
 // TODO this should be used for admin console
 //require('./authentication').init(app);
 
 app.use(session({
-	store: new RedisStore({
-		url: config.redisStore.url
-	}),
+	cookie: { secure: true },
 	secret: config.redisStore.secret,
 	resave: false,
-	saveUninitialized: false
+	saveUninitialized: true
 }));
+//app.use(session({
+//	store: new RedisStore({
+//		url: config.redisStore.url
+//	}),
+//	secret: config.redisStore.secret,
+//	resave: false,
+//	saveUninitialized: true
+//}));
 
-passport.use(new FacebookStrategy(config.facebook, function (accessToken, refreshToken, profile, done) {
-	db.findUser(profile.id, (err, result) => {
-		if (err) {
-			done({
-				status: 400,
-				error: err
-			}, null);
-		}
+require('./passport')(passport, config);
 
-		if (result.length === 0) {
-			db.createUser(profile, (err, result) => {
-				if (err) {
-					throw err;
-				}
-
-				done({status: 201}, result);
-			});
-		} else {
-			done({
-				status: 400,
-				msg: 'You have already signed in'
-			});
-		}
-		console.log(result);
-	});
-}));
+app.use(passport.initialize());
+app.use(passport.session());
 
 // Redirect the user to Facebook for authentication.  When complete,
 // Facebook will redirect the user back to the application at
@@ -78,28 +64,21 @@ app.get('/auth/facebook/callback', (req, res, next) => {
 	passport.authenticate('facebook', {
 		successRedirect: '/success',
 		failureRedirect: '/reject'
-	}, (ev) => {
-		console.log('/auth/facebook/callback', ev);
-		switch (ev.status) {
-			case 201:
-				res.redirect('/success');
-				break;
-			case 400:
-				res.redirect('/sorry');
-				break;
-			default:
-				res.redirect('/');
-				break;
-
+	}, (err, user) => {
+		//console.log('/auth/facebook/callback', req);
+		//console.log('/auth/facebook/callback', ev);
+		if (err) {
+			res.redirect('/sorry');
+		} else {
+			res.redirect('/success');
 		}
-
 	})(req, res, next);
 });
 
 app.get('/', (req, res) => {
 	res.render('pages/welcome');
 });
-app.get('/success', ensureAuthenticated, (req, res, next) => {
+app.get('/success', ensureAuthenticated, (req, res) => {
 	res.render('pages/success');
 });
 app.get('/reject', (req, res) => {
@@ -110,17 +89,22 @@ app.get('/sorry', (req, res) => {
 });
 
 function ensureAuthenticated(req, res, next) {
-	if (req.isAuthenticated()) {
-		return next();
-	}
-	res.redirect('/auth/facebook');
+	console.log("This is the authentication middleware, is req authenticated?");
+	console.log(req.isAuthenticated());
+	console.log("Does req.user exist?");
+	console.log(req.user);
+	return next();
+	//if (req.isAuthenticated()) {
+	//	return next();
+	//}
+	//res.redirect('/auth/facebook');
 }
+
+
+app.post('/image', );
 
 //app.get('/server', ensureAuthenticated, routes.server.get);
 //app.get('/login', routes.login.get);
-
-app.use(passport.initialize());
-app.use(passport.session());
 
 app.engine('.hbs', exphbs({
 	defaultLayout: 'layout',
